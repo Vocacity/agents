@@ -351,3 +351,242 @@ The Agents framework is under active development in a rapidly evolving field. We
 </tbody>
 </table>
 <!--END_REPO_NAV-->
+
+# Restaurant Voice Agent with LiveKit and Supabase
+
+A professional voice AI assistant for restaurant reservations using LiveKit Agents, Google Gemini Live API, and Supabase database.
+
+## Features
+
+- **Voice Reservations**: Natural voice interactions for taking restaurant bookings
+- **Real-time Database**: Supabase integration for customer data and reservations
+- **Availability Checking**: Smart availability checking with alternative suggestions
+- **Customer Management**: Automatic customer creation and tracking
+- **Call Logging**: Complete call history and transcription
+- **Booking Management**: Create, modify, and cancel reservations
+- **Menu Integration**: Access to restaurant menu and dietary information
+- **Ambience Information**: Restaurant atmosphere and setting details
+- **Special Requests**: Seat preferences routed to manager contact
+- **FastAPI Backend**: RESTful API for integration with web/mobile apps
+- **Manager Routing**: Complex requests automatically routed to management
+
+## Quick Setup
+
+### 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Set Up Supabase Database
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to SQL Editor and run the schema from `schema.py` (the `SUPABASE_SCHEMA` constant)
+3. Get your project URL and anon key from Project Settings > API
+
+### 3. Configure Environment Variables
+
+Create a `.env` file with the following variables:
+
+```env
+# LiveKit Configuration
+LIVEKIT_URL=wss://your-livekit-server.com
+LIVEKIT_API_KEY=your_livekit_api_key
+LIVEKIT_API_SECRET=your_livekit_api_secret
+
+# Google/Gemini API Configuration
+GOOGLE_API_KEY=your_google_gemini_api_key
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional: Restaurant Information
+RESTAURANT_NAME=Your Restaurant Name
+RESTAURANT_PHONE=+1234567890
+MANAGER_PHONE=+1234567890
+```
+
+### 4. Initialize Database with Sample Data
+
+You can manually insert a restaurant record:
+
+```sql
+INSERT INTO restaurants (name, address, phone, email, opening_hours, max_capacity) VALUES (
+    'Your Restaurant Name',
+    '123 Main St, City, State 12345',
+    '+1234567890',
+    'contact@yourrestaurant.com',
+    '{
+        "monday": {"open": "17:00", "close": "22:00"},
+        "tuesday": {"open": "17:00", "close": "22:00"},
+        "wednesday": {"open": "17:00", "close": "22:00"},
+        "thursday": {"open": "17:00", "close": "22:00"},
+        "friday": {"open": "17:00", "close": "23:00"},
+        "saturday": {"open": "17:00", "close": "23:00"},
+        "sunday": {"closed": true}
+    }',
+    50
+);
+```
+
+### 5. Run the Server
+
+Option A - Use the startup script (recommended):
+```bash
+python start_server.py
+```
+
+Option B - Run FastAPI directly:
+```bash
+python main.py
+```
+
+Option C - Run the agent standalone:
+```bash
+python agent.py start
+```
+
+## How It Works
+
+### Voice Interaction Flow
+
+1. **Customer calls** → Agent greets and asks how to help
+2. **Reservation request** → Agent collects date, time, party size, name, phone
+3. **Availability check** → System checks database and suggests alternatives if needed
+4. **Confirmation** → Booking created with confirmation code
+5. **Follow-up** → Customer can modify/cancel using confirmation code
+
+### Database Schema
+
+- **customers**: Customer information and contact details
+- **restaurants**: Restaurant information and operating hours
+- **bookings**: Reservation details with status tracking
+- **call_logs**: Complete call history and transcriptions
+- **tables**: Table management (optional for advanced features)
+- **menu**: Restaurant menu items with allergen information
+
+### Available Tools
+
+The agent has access to these tools for handling reservations:
+
+- `create_booking_tool()`: Creates new reservations
+- `check_availability_tool()`: Checks table availability
+- `find_booking_tool()`: Looks up existing bookings
+- `cancel_booking_tool()`: Cancels reservations
+
+## API Keys Setup
+
+### Google Gemini API
+1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Create a new API key
+3. Add it to your `.env` file as `GOOGLE_API_KEY`
+
+### LiveKit
+1. Sign up at [LiveKit Cloud](https://cloud.livekit.io)
+2. Create a new project
+3. Get API key and secret from project settings
+4. Add to `.env` file
+
+### Supabase
+1. Create project at [supabase.com](https://supabase.com)
+2. Go to Project Settings > API
+3. Copy URL and anon key to `.env` file
+
+## File Structure
+
+```
+├── agent.py           # Main agent with voice AI logic
+├── main.py            # FastAPI server and API endpoints
+├── start_server.py    # Startup script with database initialization
+├── database.py        # Supabase database operations
+├── schema.py          # Database schema and Pydantic models
+├── setup.py           # Package configuration
+├── requirements.txt   # Python dependencies
+└── README.md          # This file
+```
+
+## API Endpoints
+
+The FastAPI server provides the following endpoints:
+
+### Core Endpoints
+- `GET /health` - Health check and service status
+- `GET /restaurant/info` - Restaurant information and hours
+
+### Agent Management
+- `POST /agent/start-call` - Start a new agent call session
+- `POST /agent/end-call` - End an agent call session
+- `POST /agent/deploy` - Deploy the LiveKit agent worker
+- `POST /agent/stop` - Stop the agent worker
+
+### Booking Management
+- `POST /bookings` - Create a new booking
+- `POST /bookings/check-availability` - Check table availability
+- `GET /bookings/{confirmation_code}` - Get booking details
+- `PUT /bookings/{confirmation_code}/cancel` - Cancel a booking
+
+### Menu & Information
+- `POST /menu/search` - Search menu items
+- `POST /special-requests` - Handle special requests and route to manager
+
+### Customer Management
+- `GET /customers/{phone_number}` - Get customer information and booking history
+
+### Analytics
+- `GET /analytics/calls` - Get call analytics and metrics
+
+## Development
+
+### Running Tests
+```bash
+pytest
+```
+
+### Code Formatting
+```bash
+black .
+flake8 .
+```
+
+### Adding New Features
+
+1. **New database operations**: Add methods to `database.py`
+2. **New data models**: Define in `schema.py`
+3. **New agent capabilities**: Add tools to `RestaurantAssistant` class
+4. **Database schema changes**: Update `SUPABASE_SCHEMA` constant
+
+## Deployment
+
+For production deployment:
+
+1. Use Vertex AI instead of direct Gemini API
+2. Set up proper authentication with service accounts
+3. Configure Row Level Security (RLS) in Supabase
+4. Set up monitoring and logging
+5. Use environment-specific configurations
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Import errors**: Make sure all dependencies are installed
+2. **Database connection**: Check Supabase URL and API key
+3. **Voice not working**: Verify Google API key and model availability
+4. **Call tracking**: Ensure phone number is passed in room metadata
+
+### Debug Mode
+
+Set `DEBUG=true` in your `.env` file for detailed logging.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details.
