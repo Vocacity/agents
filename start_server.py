@@ -27,24 +27,24 @@ async def setup_database():
         if not restaurant:
             print("❌ No restaurant found. Please insert restaurant data manually:")
             print("""
-Run this SQL in your Supabase SQL Editor:
+                Run this SQL in your Supabase SQL Editor:
 
-INSERT INTO restaurants (name, address, phone, email, opening_hours, max_capacity) VALUES (
-    'Bella Vista Restaurant',
-    '123 Gourmet Street, Culinary District, NY 10001',
-    '+1-555-BELLA-01',
-    'reservations@bellavista.com',
-    '{
-        "monday": {"open": "17:00", "close": "22:00"},
-        "tuesday": {"open": "17:00", "close": "22:00"},
-        "wednesday": {"open": "17:00", "close": "22:00"},
-        "thursday": {"open": "17:00", "close": "22:00"},
-        "friday": {"open": "17:00", "close": "23:00"},
-        "saturday": {"open": "17:00", "close": "23:00"},
-        "sunday": {"open": "17:00", "close": "21:00"}
-    }',
-    50
-);
+                INSERT INTO restaurants (name, address, phone, email, opening_hours, max_capacity) VALUES (
+                    'Bella Vista Restaurant',
+                    '123 Gourmet Street, Culinary District, NY 10001',
+                    '+1-555-BELLA-01',
+                    'reservations@bellavista.com',
+                    '{
+                        "monday": {"open": "17:00", "close": "22:00"},
+                        "tuesday": {"open": "17:00", "close": "22:00"},
+                        "wednesday": {"open": "17:00", "close": "22:00"},
+                        "thursday": {"open": "17:00", "close": "22:00"},
+                        "friday": {"open": "17:00", "close": "23:00"},
+                        "saturday": {"open": "17:00", "close": "23:00"},
+                        "sunday": {"open": "17:00", "close": "21:00"}
+                    }',
+                    50
+                );
             """)
             return False
         

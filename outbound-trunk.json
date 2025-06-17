@@ -1,0 +1,11 @@
+{
+  "trunk": {
+    "name": "restaurant-outbound",
+    "address": "restaurant-outbound.pstn.twilio.com",
+    "numbers": [
+      "+16812434656"
+    ],
+    "auth_username": "indianrestaurnt",
+    "auth_password": "Restaurant@100"
+  }
+}

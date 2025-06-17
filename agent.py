@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from dotenv import load_dotenv
 
-from livekit import agents
+from livekit import agents, api
 from livekit.agents import AgentSession, Agent, RoomInputOptions
 from livekit.plugins import google
 
@@ -36,6 +36,7 @@ Guidelines:
 - For cancellations, ask for confirmation code or phone number
 - For special seating requests, offer to connect with manager
 - Keep responses concise but helpful
+- Speak clearly and at an appropriate pace for phone conversations
 
 Example interaction flow:
 1. Greet the customer warmly
@@ -171,12 +172,12 @@ Example interaction flow:
                 menu_items = await db.search_menu_items(search_term)
                 if menu_items:
                     response = f"Here are the menu items I found for '{search_term}':\n\n"
-                    for item in menu_items:
+                    for item in menu_items[:3]:  # Limit for voice conversation
                         response += f"• {item.item_name} - ${item.price}\n"
                         if item.description:
                             response += f"  {item.description}\n"
                         if item.allergens:
-                            response += f"  Allergens: {', '.join(item.allergens)}\n"
+                            response += f"  Contains: {', '.join(item.allergens)}\n"
                         response += "\n"
                     return response
                 else:
@@ -188,29 +189,14 @@ Example interaction flow:
             
             if category:
                 response = f"Here are our {category} options:\n\n"
-            else:
-                response = "Here's our menu:\n\n"
-                categories = {}
-                for item in menu_items:
-                    if item.category not in categories:
-                        categories[item.category] = []
-                    categories[item.category].append(item)
-                
-                for cat, items in categories.items():
-                    response += f"{cat.upper()}:\n"
-                    for item in items[:3]:  # Limit to 3 items per category for voice
-                        response += f"• {item.item_name} - ${item.price}\n"
+                for item in menu_items[:3]:  # Limit for voice
+                    response += f"• {item.item_name} - ${item.price}\n"
+                    if item.description:
+                        response += f"  {item.description}\n"
                     response += "\n"
-                
-                return response
-            
-            for item in menu_items:
-                response += f"• {item.item_name} - ${item.price}\n"
-                if item.description:
-                    response += f"  {item.description}\n"
-                if item.allergens:
-                    response += f"  Allergens: {', '.join(item.allergens)}\n"
-                response += "\n"
+            else:
+                response = "We have several menu categories: appetizers, main courses, desserts, and beverages. "
+                response += "Which category would you like to hear about?"
             
             return response
             
@@ -225,12 +211,12 @@ Example interaction flow:
                 return "I'm sorry, I don't have restaurant information available right now."
             
             if info_type.lower() in ["hours", "time", "open"]:
-                response = f"Our operating hours are:\n\n"
+                response = f"Our operating hours are: "
                 for day, hours in restaurant.opening_hours.items():
                     if hours.get("closed"):
-                        response += f"{day.title()}: Closed\n"
+                        response += f"{day.title()}: Closed. "
                     else:
-                        response += f"{day.title()}: {hours.get('open')} - {hours.get('close')}\n"
+                        response += f"{day.title()}: {hours.get('open')} to {hours.get('close')}. "
                 return response
             
             elif info_type.lower() in ["location", "address", "where"]:
@@ -243,9 +229,8 @@ Example interaction flow:
                 we strive to create the perfect ambience for your dining experience."""
             
             else:
-                return f"""Welcome to {restaurant.name}! We're located at {restaurant.address}. 
-                Our restaurant offers a warm, elegant atmosphere perfect for any dining occasion. 
-                You can reach us at {restaurant.phone} for any questions."""
+                return f"""Thank you for calling {restaurant.name}! We're located at {restaurant.address}. 
+                Our restaurant offers a warm, elegant atmosphere perfect for any dining occasion."""
                 
         except Exception as e:
             return f"I'm sorry, there was an error getting restaurant information: {str(e)}"
@@ -257,39 +242,30 @@ Example interaction flow:
             
             if any(keyword in request_type.lower() for keyword in ["seat", "table", "location", "view", "private", "booth"]):
                 return f"""I understand you have a special seating request: {details}. 
-                For specific seating arrangements and table preferences, I'd be happy to connect you with our manager 
-                who can ensure we accommodate your needs perfectly. 
-                
-                You can reach our manager directly at {manager_phone}, or I can note this request 
-                and have them call you back. Which would you prefer?"""
+                For specific seating arrangements and table preferences, I can note this request 
+                and have our manager call you back to ensure we accommodate your needs perfectly. 
+                Our manager can be reached at {manager_phone}. Would you like me to note this request?"""
             
             elif any(keyword in request_type.lower() for keyword in ["dietary", "allergy", "food", "kitchen"]):
                 return f"""I've noted your dietary request: {details}. 
                 Our kitchen team is very accommodating with dietary restrictions and allergies. 
-                I'll make sure this information is included with your reservation. 
-                
-                For complex dietary needs, our manager at {manager_phone} can also discuss 
-                specific preparation methods with our chef."""
+                I'll make sure this information is included with your reservation."""
             
             elif any(keyword in request_type.lower() for keyword in ["event", "celebration", "party", "special occasion"]):
                 return f"""That sounds like a wonderful {request_type}! I've noted: {details}. 
                 For special celebrations, our manager can help arrange decorations, special menus, 
-                or other arrangements to make your event memorable. 
-                
-                Please call our manager at {manager_phone} to discuss the details, 
-                or I can have them call you back."""
+                or other arrangements. Our manager can be reached at {manager_phone} to discuss the details."""
             
             else:
                 return f"""I've noted your special request: {details}. 
-                I'll include this with your reservation. For any complex arrangements, 
-                our manager at {manager_phone} can assist you further."""
+                I'll include this with your reservation. Our staff will follow up with you."""
                 
         except Exception as e:
             return f"I've noted your request and will include it with your reservation. Our staff will follow up with you."
 
 
 async def entrypoint(ctx: agents.JobContext):
-    # Extract phone number from room metadata if available
+    # Extract phone number from room metadata if available (for telephony)
     phone_number = ctx.room.metadata.get("phone_number", "unknown")
     
     session = AgentSession(
@@ -297,7 +273,7 @@ async def entrypoint(ctx: agents.JobContext):
             model="gemini-2.0-flash-exp",
             voice="Puck", 
             temperature=0.6,
-            instructions="""You are a professional restaurant reservation assistant. You can help customers with:
+            instructions="""You are a professional restaurant reservation assistant answering phone calls. You can help customers with:
             
             1. Making new reservations - ask for date, time, party size, name, and phone number
             2. Checking availability for specific dates and times
@@ -319,16 +295,17 @@ async def entrypoint(ctx: agents.JobContext):
             Date format: YYYY-MM-DD (e.g., 2024-12-25)
             Time format: HH:MM in 24-hour format (e.g., 19:30 for 7:30 PM)
             
-            Always be friendly and professional. Confirm details before making bookings.
-            For complex seating requests, route to manager contact."""
+            Always be friendly and professional. Speak clearly for phone conversations.
+            Confirm details before making bookings. For complex seating requests, route to manager contact."""
         )
     )
 
     # Create restaurant assistant
     assistant = RestaurantAssistant()
     
-    # Start call tracking
-    await assistant.start_call_tracking(phone_number)
+    # Start call tracking for telephony calls
+    if phone_number != "unknown":
+        await assistant.start_call_tracking(phone_number)
 
     await session.start(
         room=ctx.room,
@@ -346,10 +323,15 @@ async def entrypoint(ctx: agents.JobContext):
     session.register_tool(assistant.get_restaurant_info_tool)
     session.register_tool(assistant.handle_special_requests_tool)
 
+    # Answer the phone with a greeting
     await session.generate_reply(
-        instructions="Greet the customer warmly and ask how you can help them with their restaurant reservation or any questions about our restaurant today."
+        instructions="Answer the phone professionally and warmly. Greet the caller and ask how you can help them with their restaurant reservation or questions today."
     )
 
 
 if __name__ == "__main__":
-    agents.cli.run_app(agents.WorkerOptions(entrypoint_fnc=entrypoint))
+    # Agent name required for explicit dispatch (telephony requirement)
+    agents.cli.run_app(agents.WorkerOptions(
+        entrypoint_fnc=entrypoint,
+        agent_name="restaurant-telephony-agent"  # Required for telephony dispatch
+    ))

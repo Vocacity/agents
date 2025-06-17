@@ -1,5 +1,6 @@
 # LiveKit dependencies
 livekit-agents[google]~=1.0
+livekit-cli>=1.0.0
 python-dotenv>=1.0.0
 
 # Supabase dependencies
